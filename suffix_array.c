@@ -1223,7 +1223,8 @@ void reverse_complement(char* motif, int mlen, char* motif_rc)
 //                 float* mean_data, int* count_data)
 void motif_means(const char* motifs_data, int motif_count, int max_mlen,
                  float* fwd, float* rev,
-                 int* SA, int* lcp, int* s, int n, int*** index, int* SAr,
+                 int* SA, int* lcp, int* s, int n, 
+                 int** rmq, int*** index, int* SAr,
                  float* mean_data, int* count_data)
 {
   // create row pointers for numpy arrays
@@ -1260,12 +1261,15 @@ void motif_means(const char* motifs_data, int motif_count, int max_mlen,
       total_n[o] = 0;
     }
     int n_indices, idx;
-    //n_indices = find_motif_nonparallel((const char*)motif, mlen,
-    //                       SA, lcp, s, n, rmq,
-    //                       &indices);
-    n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
-                           SA, lcp, s, n, index, SAr,
-                           &indices);
+    if (mlen > INDEX_SIZE) {
+      n_indices = find_motif_nonparallel((const char*)motif, mlen,
+                             SA, lcp, s, n, rmq,
+                             &indices);
+    } else {
+      n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
+                            SA, lcp, s, n, index, SAr,
+                            &indices);
+    }
     for (int i=0; i<n_indices; i++) {
       for (int o=0; o<n_offsets; o++) {
         idx = indices[i] + offsets[o];
@@ -1275,12 +1279,15 @@ void motif_means(const char* motifs_data, int motif_count, int max_mlen,
         }
       }
     }
-    //n_indices = find_motif_nonparallel((const char*)motif_rc, mlen,
-    //                       SA, lcp, s, n, rmq,
-    //                       &indices_rc);
-    n_indices = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
-                           SA, lcp, s, n, index, SAr,
-                           &indices_rc);
+    if (mlen > INDEX_SIZE) {
+      n_indices = find_motif_nonparallel((const char*)motif_rc, mlen,
+                             SA, lcp, s, n, rmq,
+                             &indices_rc);
+    } else {
+      n_indices = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
+                            SA, lcp, s, n, index, SAr,
+                            &indices_rc);
+    }
     for (int i=0; i<n_indices; i++) {
       for (int o=0; o<n_offsets; o++) {
         idx = indices_rc[i] + mlen - 1 - offsets[o];

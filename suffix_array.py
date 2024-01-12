@@ -69,7 +69,8 @@ c_lib.find_motif.argtypes = [
 c_lib.motif_means.argtypes = [
     char_2d_pp, ct.c_int, ct.c_int,
     single_1d_pp, single_1d_pp,
-    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, PT(PT(PT(ct.c_int))), PT(ct.c_int),
+    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
+    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
     single_2d_pp, int_2d_pp]
 c_lib.quick_select_median.restype = ct.c_float
 c_lib.quick_select_median.argtypes = [
@@ -214,8 +215,8 @@ def motif_means(motifs, max_mlen, fwd, rev, sa):
     # construct motif array
     motif_array = np.array([m.ljust(max_mlen+1, '\0').encode('utf8') for m in motifs], dtype=f'|S{max_mlen+1}')
     motif_array = motif_array.view(np.byte).reshape((motif_array.size, -1))
-    means = np.empty((len(motifs), max_mlen), dtype=np.single)
-    counts = np.empty((len(motifs), max_mlen), dtype=np.int32)
+    means = np.full((len(motifs), max_mlen), dtype=np.single, fill_value=np.nan)
+    counts = np.full((len(motifs), max_mlen), dtype=np.int32, fill_value=0)
     fwd_ = np.array(fwd, dtype=np.single)
     rev_ = np.array(rev, dtype=np.single)
     #c_lib.motif_means(motif_array, len(motifs), max_mlen+1,
@@ -224,7 +225,8 @@ def motif_means(motifs, max_mlen, fwd, rev, sa):
     #                  means, counts)
     c_lib.motif_means(motif_array, len(motifs), max_mlen+1,
                       fwd_, rev_,
-                      sa.sa, sa.lcp, sa.s, sa.n, sa.index, sa.sar,
+                      sa.sa, sa.lcp, sa.s, sa.n,
+                      sa.rmq, sa.index, sa.sar,
                       means, counts)
     return means, counts
 
