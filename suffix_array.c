@@ -112,6 +112,16 @@ void suffix_array_init(const char* str, int* encoding, SuffixArray* sa)
   sa->s[strlen(str)] = sa->s[n] = sa->s[n+1] = sa->s[n+2] = 0;
 }
 
+void delete_suffix_array(SuffixArray* sa)
+{
+  free(sa->sa);
+  free(sa->s);
+  free(sa->lcp);
+  free(sa->rmq);
+  free(sa->sar);
+  free(sa->index);
+}
+
 // lexicographic order for pairs
 //inline
 bool leq2(int a1, int a2, int b1, int b2) {

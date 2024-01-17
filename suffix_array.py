@@ -89,6 +89,8 @@ c_lib.get_indices_bipartite.argtypes = [
     ct.c_int, ct.c_int, ct.c_int, PT(ct.c_int), ct.c_int, nd_pp]
 c_lib.suffix_array_init.argtypes = [
     ct.c_char_p, PT(ct.c_int), PT(SuffixArray)]
+c_lib.delete_suffix_array.argtypes = [
+    PT(SuffixArray)]
 c_lib.print_sa_lcd.argtypes = [
     PT(SuffixArray), ct.c_char_p]
 c_lib.write_sa.argtypes = [
@@ -119,6 +121,10 @@ def get_suffix_array(record_id, seq, cache_dir='tmp'):
     if cache_dir:
         c_lib.write_sa(ct.byref(sa), c_index_fp)
     return sa
+
+def delete_suffix_array(sa):
+    c_lib.delete_suffix_array(sa)
+    del sa
 
 def print_sa_lcd(sa, seq):
     c_str = ct.c_char_p(seq.encode('utf8'))
