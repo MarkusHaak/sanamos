@@ -3,7 +3,7 @@ CC=gcc
 # -lm to make <math.h> work
 # -fopenmp for openmp
 # -funsigned-char because default is not defined for char!!
-CFLAGS= --std=gnu11 -Wall -pedantic -lrt -fopenmp -lm -funsigned-char 
+CFLAGS= --std=gnu11 -O3 -march=native -Wall -pedantic -lrt -fopenmp -lm -funsigned-char 
 LDFLAGS= -fPIC -shared
 DEPS = suffix_array.h
 OBJ = main.o suffix_array.o sa.so
