@@ -1247,7 +1247,7 @@ void motif_means(const char* motifs_data, int motif_count, int max_mlen,
     count[i] = count_data + i * (max_mlen - 1);
   }
   // process each motif
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for schedule(dynamic, 1000) if(motif_count > 10000)
   for (int m=0; m<motif_count; m++) {
     char* motif = motifs[m];
     int mlen = strlen(motifs[m]);
