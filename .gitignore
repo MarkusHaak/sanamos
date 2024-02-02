@@ -31,6 +31,7 @@ __pycache__
 *.dylib
 
 # Executables
+main
 *.exe
 *.out
 *.app
