@@ -1380,7 +1380,8 @@ float quick_select_median(float arr[], uint32_t n)
 
 void motif_medians(const char* motifs_data, int motif_count, int max_mlen,
                    float* fwd, float* rev,
-                   int* SA, int* lcp, int* s, int n, int** rmq,
+                   int* SA, int* lcp, int* s, int n, 
+                   int** rmq, int*** index, int* SAr,
                    float* median_data, int* count_data)
 {
   // create row pointers for numpy arrays
@@ -1417,12 +1418,30 @@ void motif_medians(const char* motifs_data, int motif_count, int max_mlen,
       //total_sum[o] = 0.0;
       total_n[o] = 0;
     }
-    n_indices = find_motif_nonparallel((const char*)motif, mlen,
-                           SA, lcp, s, n, rmq,
-                           &indices);
-    n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
-                           SA, lcp, s, n, rmq,
-                           &indices_rc);
+    //n_indices = find_motif_nonparallel((const char*)motif, mlen,
+    //                       SA, lcp, s, n, rmq,
+    //                       &indices);
+    if (mlen > INDEX_SIZE) {
+      n_indices = find_motif_nonparallel((const char*)motif, mlen,
+                             SA, lcp, s, n, rmq,
+                             &indices);
+    } else {
+      n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
+                            SA, lcp, s, n, index, SAr,
+                            &indices);
+    }
+    //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
+    //                       SA, lcp, s, n, rmq,
+    //                       &indices_rc);
+    if (mlen > INDEX_SIZE) {
+      n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
+                             SA, lcp, s, n, rmq,
+                             &indices_rc);
+    } else {
+      n_indices_rc = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
+                            SA, lcp, s, n, index, SAr,
+                            &indices_rc);
+    }
     int n_indices_total = n_indices + n_indices_rc;
     // define encodings array
     float** position_vals = (float**)malloc(sizeof(float*) * n_offsets + sizeof(float) * (n_offsets * n_indices_total));

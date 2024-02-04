@@ -32,6 +32,8 @@ extern int encode_str(
   const char* str, int* encoding, int* s);
 extern void suffix_array_init(
   const char* str, int* encoding, SuffixArray* sa);
+extern void delete_suffix_array(
+  SuffixArray* sa);
 extern void print_sa_lcd(
   SuffixArray* sa, const char* str);
 extern void radixPass(
@@ -88,7 +90,8 @@ extern void motif_means(
 extern void motif_medians(
   const char* motifs_data, int motif_count, int max_mlen,
   float* fwd, float* rev,
-  int* SA, int* lcp, int* s, int n, int** rmq,
+  int* SA, int* lcp, int* s, int n, 
+  int** rmq, int*** index, int* SAr,
   float* median_data, int* count_data);
 extern float quick_select_median(
   float arr[], uint32_t n);

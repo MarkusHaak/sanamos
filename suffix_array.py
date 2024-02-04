@@ -78,7 +78,8 @@ c_lib.quick_select_median.argtypes = [
 c_lib.motif_medians.argtypes = [
     char_2d_pp, ct.c_int, ct.c_int,
     single_1d_pp, single_1d_pp,
-    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, PT(PT(ct.c_int)),
+    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
+    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
     single_2d_pp, int_2d_pp]
 c_lib.get_indices.argtypes = [
     ct.c_int, ct.c_int, PT(ct.c_int), nd_pp]
@@ -246,7 +247,8 @@ def motif_medians(motifs, max_mlen, fwd, rev, sa):
     rev_ = np.array(rev, dtype=np.single)
     c_lib.motif_medians(motif_array, len(motifs), max_mlen+1,
                       fwd_, rev_,
-                      sa.sa, sa.lcp, sa.s, sa.n, sa.rmq,
+                      sa.sa, sa.lcp, sa.s, sa.n, 
+                      sa.rmq, sa.index, sa.sar,
                       medians, counts)
     return medians, counts
 
