@@ -1465,7 +1465,7 @@ void motif_medians(
         if (idx < 0 || idx >= (n-1))
           continue;
         if (fwd[idx] == fwd[idx]) { // non-nan
-          position_vals[o][total_n[o]] = fabsf(fwd[idx]);
+          position_vals[o][total_n[o]] = fwd[idx]; //fabsf(fwd[idx]);
           total_n[o]++;
         }
       }
@@ -1476,7 +1476,7 @@ void motif_medians(
         if (idx < 0 || idx >= (n-1))
           continue;
         if (rev[idx] == rev[idx]) { // non-nan
-          position_vals[o][total_n[o]] = fabsf(rev[idx]);
+          position_vals[o][total_n[o]] = rev[idx]; //fabsf(rev[idx]);
           total_n[o]++;
         }
       }
@@ -1497,7 +1497,7 @@ void motif_medians(
 }
 
 void all_motif_medians(
-  const char* motifs_data, int motif_count, int max_mlen,
+  const char* motifs_data, int motif_count, int max_mlen, int pad,
   float* fwd, float* rev,
   int* SA, int* lcp, int* s, int n, 
   int** rmq, int*** index, int* SAr,
@@ -1509,11 +1509,11 @@ void all_motif_medians(
   int** count = (int**)malloc(sizeof(int*) * motif_count);
   for (int i=0; i<motif_count; i++) {
     motifs[i] = ((char*)motifs_data) + i * max_mlen;
-    median[i] = median_data + i * (max_mlen - 1 + 4);
-    count[i] = count_data + i * (max_mlen - 1 + 4);
+    median[i] = median_data + i * (max_mlen - 1 + 2*pad);
+    count[i] = count_data + i * (max_mlen - 1 + 2*pad);
   }
   // process each motif
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for schedule(dynamic, 1000) if(motif_count > 10000)
   for (int m=0; m<motif_count; m++) {
     char* motif = motifs[m];
     int mlen = strlen(motifs[m]);
@@ -1521,8 +1521,8 @@ void all_motif_medians(
     reverse_complement(motif, mlen, motif_rc);
     // get offset locations
     int n_offsets = 0;
-    int offsets[mlen+4];
-    for (int o=-2; o<mlen+2; o++) {
+    int offsets[mlen+2*pad];
+    for (int o=-pad; o<mlen+pad; o++) {
       //if (motif[o] == 'A' || motif[o] == 'C' || motif[o] == 'M') {
       offsets[n_offsets] = o;
       n_offsets++;
@@ -1575,7 +1575,7 @@ void all_motif_medians(
         if (idx < 0 || idx >= (n-1))
           continue;
         if (fwd[idx] == fwd[idx]) { // non-nan
-          position_vals[o][total_n[o]] = fabsf(fwd[idx]);
+          position_vals[o][total_n[o]] = fwd[idx]; //fabsf(fwd[idx]);
           total_n[o]++;
         }
       }
@@ -1586,7 +1586,7 @@ void all_motif_medians(
         if (idx < 0 || idx >= (n-1))
           continue;
         if (rev[idx] == rev[idx]) { // non-nan
-          position_vals[o][total_n[o]] = fabsf(rev[idx]);
+          position_vals[o][total_n[o]] = rev[idx]; //fabsf(rev[idx]);
           total_n[o]++;
         }
       }

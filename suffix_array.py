@@ -81,6 +81,12 @@ c_lib.motif_medians.argtypes = [
     PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
     PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
     single_2d_pp, int_2d_pp]
+c_lib.all_motif_medians.argtypes = [
+    char_2d_pp, ct.c_int, ct.c_int, ct.c_int,
+    single_1d_pp, single_1d_pp,
+    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
+    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
+    single_2d_pp, int_2d_pp]
 c_lib.get_indices.argtypes = [
     ct.c_int, ct.c_int, PT(ct.c_int), nd_pp]
 c_lib.get_indices_from_bipartite_search.argtypes = [
@@ -250,6 +256,22 @@ def motif_medians(motifs, max_mlen, fwd, rev, sa):
                       sa.sa, sa.lcp, sa.s, sa.n, 
                       sa.rmq, sa.index, sa.sar,
                       medians, counts)
+    return medians, counts
+
+def all_motif_medians(motifs, max_mlen, fwd, rev, sa, pad=2):
+    # construct motif array
+    motif_array = np.array([m.ljust(max_mlen+1, '\0').encode('utf8') for m in motifs], dtype=f'|S{max_mlen+1}')
+    motif_array = motif_array.view(np.byte).reshape((motif_array.size, -1))
+    medians = np.full((len(motifs), max_mlen+2*pad), dtype=np.single, fill_value=np.nan)
+    counts = np.full((len(motifs), max_mlen+2*pad), dtype=np.int32, fill_value=0)
+    fwd_ = np.array(fwd, dtype=np.single)
+    rev_ = np.array(rev, dtype=np.single)
+    c_lib.all_motif_medians(
+        motif_array, len(motifs), max_mlen+1, pad,
+        fwd_, rev_,
+        sa.sa, sa.lcp, sa.s, sa.n, 
+        sa.rmq, sa.index, sa.sar,
+        medians, counts)
     return medians, counts
 
 if __name__ == '__main__':
