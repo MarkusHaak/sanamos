@@ -241,8 +241,8 @@ def motif_medians(motifs, max_mlen, fwd, rev, sa):
     # construct motif array
     motif_array = np.array([m.ljust(max_mlen+1, '\0').encode('utf8') for m in motifs], dtype=f'|S{max_mlen+1}')
     motif_array = motif_array.view(np.byte).reshape((motif_array.size, -1))
-    medians = np.empty((len(motifs), max_mlen+4), dtype=np.single)
-    counts = np.empty((len(motifs), max_mlen+4), dtype=np.int32)
+    medians = np.full((len(motifs), max_mlen), dtype=np.single, fill_value=np.nan)
+    counts = np.full((len(motifs), max_mlen), dtype=np.int32, fill_value=0)
     fwd_ = np.array(fwd, dtype=np.single)
     rev_ = np.array(rev, dtype=np.single)
     c_lib.motif_medians(motif_array, len(motifs), max_mlen+1,

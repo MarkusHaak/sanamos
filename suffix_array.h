@@ -93,6 +93,12 @@ extern void motif_medians(
   int* SA, int* lcp, int* s, int n, 
   int** rmq, int*** index, int* SAr,
   float* median_data, int* count_data);
+extern void all_motif_medians(
+  const char* motifs_data, int motif_count, int max_mlen,
+  float* fwd, float* rev,
+  int* SA, int* lcp, int* s, int n, 
+  int** rmq, int*** index, int* SAr,
+  float* median_data, int* count_data);
 extern float quick_select_median(
   float arr[], uint32_t n);
 extern void write_sa(

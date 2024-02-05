@@ -1257,7 +1257,7 @@ void motif_means(const char* motifs_data, int motif_count, int max_mlen,
     int n_offsets = 0;
     int offsets[mlen];
     for (int o=0; o<mlen; o++) {
-      if (motif[o] == 'A' || motif[o] == 'C' || motif[o] == 'M') {
+      if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
         offsets[n_offsets] = o;
         n_offsets++;
       }
@@ -1378,11 +1378,130 @@ float quick_select_median(float arr[], uint32_t n)
   }
 }
 
-void motif_medians(const char* motifs_data, int motif_count, int max_mlen,
-                   float* fwd, float* rev,
-                   int* SA, int* lcp, int* s, int n, 
-                   int** rmq, int*** index, int* SAr,
-                   float* median_data, int* count_data)
+void motif_medians(
+  const char* motifs_data, int motif_count, int max_mlen,
+  float* fwd, float* rev,
+  int* SA, int* lcp, int* s, int n, 
+  int** rmq, int*** index, int* SAr,
+  float* median_data, int* count_data)
+{
+  // create row pointers for numpy arrays
+  char** motifs = (char**)malloc(sizeof(char*) * motif_count);
+  float** median = (float**)malloc(sizeof(float*) * motif_count);
+  int** count = (int**)malloc(sizeof(int*) * motif_count);
+  for (int i=0; i<motif_count; i++) {
+    motifs[i] = ((char*)motifs_data) + i * max_mlen;
+    median[i] = median_data + i * (max_mlen - 1);
+    count[i] = count_data + i * (max_mlen - 1);
+  }
+  // process each motif
+#pragma omp parallel for schedule(dynamic, 1000) if(motif_count > 10000)
+  for (int m=0; m<motif_count; m++) {
+    char* motif = motifs[m];
+    int mlen = strlen(motifs[m]);
+    char motif_rc[mlen + 1];
+    reverse_complement(motif, mlen, motif_rc);
+    //// get offset locations
+    //int n_offsets = 0;
+    //int offsets[mlen+4];
+    //for (int o=-2; o<mlen+2; o++) {
+    //  //if (motif[o] == 'A' || motif[o] == 'C' || motif[o] == 'M') {
+    //  offsets[n_offsets] = o;
+    //  n_offsets++;
+    //  //}
+    //}
+    int n_offsets = 0;
+    int offsets[mlen];
+    for (int o=0; o<mlen; o++) {
+      if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
+        offsets[n_offsets] = o;
+        n_offsets++;
+      }
+    }
+    // 
+    int n_indices, n_indices_rc, idx;
+    int *indices, *indices_rc;
+    //double total_sum[n_offsets];
+    int total_n[n_offsets];
+    for (int o=0; o<n_offsets; o++) {
+      //total_sum[o] = 0.0;
+      total_n[o] = 0;
+    }
+    //n_indices = find_motif_nonparallel((const char*)motif, mlen,
+    //                       SA, lcp, s, n, rmq,
+    //                       &indices);
+    if (mlen > INDEX_SIZE) {
+      n_indices = find_motif_nonparallel((const char*)motif, mlen,
+                             SA, lcp, s, n, rmq,
+                             &indices);
+    } else {
+      n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
+                            SA, lcp, s, n, index, SAr,
+                            &indices);
+    }
+    //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
+    //                       SA, lcp, s, n, rmq,
+    //                       &indices_rc);
+    if (mlen > INDEX_SIZE) {
+      n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
+                             SA, lcp, s, n, rmq,
+                             &indices_rc);
+    } else {
+      n_indices_rc = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
+                            SA, lcp, s, n, index, SAr,
+                            &indices_rc);
+    }
+    int n_indices_total = n_indices + n_indices_rc;
+    // define encodings array
+    float** position_vals = (float**)malloc(sizeof(float*) * n_offsets + sizeof(float) * (n_offsets * n_indices_total));
+    float* data = (float*)(position_vals + n_offsets);
+    for (int i=0; i<n_offsets; i++) {
+      position_vals[i] = data + (i * n_indices_total);
+    }
+    // gather non-nan values
+    for (int i=0; i<n_indices; i++) {
+      for (int o=0; o<n_offsets; o++) {
+        idx = indices[i] + offsets[o];
+        if (idx < 0 || idx >= (n-1))
+          continue;
+        if (fwd[idx] == fwd[idx]) { // non-nan
+          position_vals[o][total_n[o]] = fabsf(fwd[idx]);
+          total_n[o]++;
+        }
+      }
+    }
+    for (int i=0; i<n_indices_rc; i++) {
+      for (int o=0; o<n_offsets; o++) {
+        idx = indices_rc[i] + mlen - 1 - offsets[o];
+        if (idx < 0 || idx >= (n-1))
+          continue;
+        if (rev[idx] == rev[idx]) { // non-nan
+          position_vals[o][total_n[o]] = fabsf(rev[idx]);
+          total_n[o]++;
+        }
+      }
+    }
+    // calculate medians
+    for (int o=0; o<n_offsets; o++) {
+      if (total_n[o] > 0) {
+        median[m][offsets[o]] = quick_select_median(position_vals[o], total_n[o]);
+      } else {
+        median[m][offsets[o]] = NAN;
+      }
+      count[m][offsets[o]] = total_n[o];
+    }
+    free(indices); free(indices_rc); free(position_vals);
+  }
+  // free memory
+  free(motifs); free(median); free(count);
+}
+
+void all_motif_medians(
+  const char* motifs_data, int motif_count, int max_mlen,
+  float* fwd, float* rev,
+  int* SA, int* lcp, int* s, int n, 
+  int** rmq, int*** index, int* SAr,
+  float* median_data, int* count_data)
 {
   // create row pointers for numpy arrays
   char** motifs = (char**)malloc(sizeof(char*) * motif_count);
