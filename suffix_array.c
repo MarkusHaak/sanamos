@@ -1231,7 +1231,7 @@ void reverse_complement(char* motif, int mlen, char* motif_rc)
 //                 float* fwd, float* rev,
 //                 int* SA, int* lcp, int* s, int n, int** rmq,
 //                 float* mean_data, int* count_data)
-void motif_means(const char* motifs_data, int motif_count, int max_mlen,
+void motif_means(const char* motifs_data, int motif_count, int max_mlen, const char* bases,
                  float* fwd, float* rev,
                  int* SA, int* lcp, int* s, int n, 
                  int** rmq, int*** index, int* SAr,
@@ -1247,6 +1247,7 @@ void motif_means(const char* motifs_data, int motif_count, int max_mlen,
     count[i] = count_data + i * (max_mlen - 1);
   }
   // process each motif
+  int n_bases = strlen(bases);
 #pragma omp parallel for schedule(dynamic, 1000) if(motif_count > 10000)
   for (int m=0; m<motif_count; m++) {
     char* motif = motifs[m];
@@ -1257,9 +1258,16 @@ void motif_means(const char* motifs_data, int motif_count, int max_mlen,
     int n_offsets = 0;
     int offsets[mlen];
     for (int o=0; o<mlen; o++) {
-      if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
-        offsets[n_offsets] = o;
-        n_offsets++;
+      //if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
+      //  offsets[n_offsets] = o;
+      //  n_offsets++;
+      //}
+      for (int b=0; b<n_bases; b++) {
+        if (motif[o] == bases[b]) {
+          offsets[n_offsets] = o;
+          n_offsets++;
+          break;
+        }
       }
     }
     // 
@@ -1379,7 +1387,7 @@ float quick_select_median(float arr[], uint32_t n)
 }
 
 void motif_medians(
-  const char* motifs_data, int motif_count, int max_mlen,
+  const char* motifs_data, int motif_count, int max_mlen, const char* bases,
   float* fwd, float* rev,
   int* SA, int* lcp, int* s, int n, 
   int** rmq, int*** index, int* SAr,
@@ -1395,6 +1403,7 @@ void motif_medians(
     count[i] = count_data + i * (max_mlen - 1);
   }
   // process each motif
+  int n_bases = strlen(bases);
 #pragma omp parallel for schedule(dynamic, 1000) if(motif_count > 10000)
   for (int m=0; m<motif_count; m++) {
     char* motif = motifs[m];
@@ -1413,9 +1422,16 @@ void motif_medians(
     int n_offsets = 0;
     int offsets[mlen];
     for (int o=0; o<mlen; o++) {
-      if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
-        offsets[n_offsets] = o;
-        n_offsets++;
+      //if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
+      //  offsets[n_offsets] = o;
+      //  n_offsets++;
+      //}
+      for (int b=0; b<n_bases; b++) {
+        if (motif[o] == bases[b]) {
+          offsets[n_offsets] = o;
+          n_offsets++;
+          break;
+        }
       }
     }
     // 

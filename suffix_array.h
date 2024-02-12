@@ -82,13 +82,13 @@ extern int find_motif_nonparallel_indexed(
 //  int* SA, int* lcp, int* s, int n, int** rmq,
 //  float* mean_data, int* count_data);
 extern void motif_means(
-  const char* motifs_data, int motif_count, int max_mlen,
+  const char* motifs_data, int motif_count, int max_mlen, const char* bases,
   float* fwd, float* rev,
   int* SA, int* lcp, int* s, int n, 
   int** rmq, int*** index, int* SAr,
   float* mean_data, int* count_data);
 extern void motif_medians(
-  const char* motifs_data, int motif_count, int max_mlen,
+  const char* motifs_data, int motif_count, int max_mlen, const char* bases,
   float* fwd, float* rev,
   int* SA, int* lcp, int* s, int n, 
   int** rmq, int*** index, int* SAr,
