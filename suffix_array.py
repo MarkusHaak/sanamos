@@ -68,18 +68,23 @@ c_lib.find_motif.argtypes = [
 #    single_2d_pp, int_2d_pp]
 c_lib.motif_means.argtypes = [
     char_2d_pp, ct.c_int, ct.c_int, ct.c_char_p,
-    single_1d_pp, single_1d_pp,
-    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
-    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
+#    single_1d_pp, single_1d_pp,
+#    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
+#    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
+    PT(ct.c_void_p), PT(ct.c_void_p),
+    PT(PT(SuffixArray)), ct.c_int,
     single_2d_pp, int_2d_pp]
 c_lib.quick_select_median.restype = ct.c_float
 c_lib.quick_select_median.argtypes = [
     single_1d_pp, ct.c_int]
 c_lib.motif_medians.argtypes = [
     char_2d_pp, ct.c_int, ct.c_int, ct.c_char_p,
-    single_1d_pp, single_1d_pp,
-    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
-    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
+#    single_1d_pp, single_1d_pp,
+#    PT(ct.c_int), PT(ct.c_int), PT(ct.c_int), ct.c_int, 
+#    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
+#    PT(single_1d_pp), PT(single_1d_pp),
+    PT(ct.c_void_p), PT(ct.c_void_p),
+    PT(PT(SuffixArray)), ct.c_int,
     single_2d_pp, int_2d_pp]
 c_lib.all_motif_medians.argtypes = [
     char_2d_pp, ct.c_int, ct.c_int, ct.c_int,
@@ -224,39 +229,60 @@ def find_motif(motif, sa, poi=0, rc=True):
     else:
         return indices
 
-def motif_means(motifs, max_mlen, fwd, rev, sa, bases="AC"):
+def motif_means(motifs, max_mlen, fwds, revs, SAs, bases="AC"):
     # construct motif array
     motif_array = np.array([m.ljust(max_mlen+1, '\0').encode('utf8') for m in motifs], dtype=f'|S{max_mlen+1}')
     motif_array = motif_array.view(np.byte).reshape((motif_array.size, -1))
     means = np.full((len(motifs), max_mlen), dtype=np.single, fill_value=np.nan)
     counts = np.full((len(motifs), max_mlen), dtype=np.int32, fill_value=0)
-    fwd_ = np.array(fwd, dtype=np.single)
-    rev_ = np.array(rev, dtype=np.single)
+    c_bases = ct.c_char_p((bases + '\0').encode('utf8'))
+
+    #fwd_ = np.array(fwd, dtype=np.single)
+    #rev_ = np.array(rev, dtype=np.single)
     #c_lib.motif_means(motif_array, len(motifs), max_mlen+1,
     #                  fwd_, rev_,
     #                  sa.sa, sa.lcp, sa.s, sa.n, sa.rmq,
     #                  means, counts)
-    c_bases = ct.c_char_p((bases + '\0').encode('utf8'))
+    fwd_ = [np.array(fwd, dtype=np.single) for fwd in fwds]
+    rev_ = [np.array(rev, dtype=np.single) for rev in revs]
+    fwd_arr = (ct.c_void_p * len(SAs))(*[ct.cast(np.ctypeslib.as_ctypes(fwd), ct.c_void_p) for fwd in fwd_])
+    rev_arr = (ct.c_void_p * len(SAs))(*[ct.cast(np.ctypeslib.as_ctypes(rev), ct.c_void_p) for rev in rev_])
+    SAs_arr = (PT(SuffixArray) * len(SAs))(*[ct.cast(ct.byref(sa), PT(SuffixArray)) for sa in SAs])
     c_lib.motif_means(motif_array, len(motifs), max_mlen+1, c_bases,
-                      fwd_, rev_,
-                      sa.sa, sa.lcp, sa.s, sa.n,
-                      sa.rmq, sa.index, sa.sar,
+                      #fwd_, rev_,
+                      #sa.sa, sa.lcp, sa.s, sa.n,
+                      #sa.rmq, sa.index, sa.sar,
+                      fwd_arr, rev_arr,
+                      SAs_arr, len(SAs),
                       means, counts)
     return means, counts
 
-def motif_medians(motifs, max_mlen, fwd, rev, sa, bases="AC"):
+def motif_medians(motifs, max_mlen, fwds, revs, SAs, bases="AC"):
+    if type(SAs) != list:
+        fwds = [fwds]
+        revs = [revs]
+        SAs = [SAs]
     # construct motif array
     motif_array = np.array([m.ljust(max_mlen+1, '\0').encode('utf8') for m in motifs], dtype=f'|S{max_mlen+1}')
     motif_array = motif_array.view(np.byte).reshape((motif_array.size, -1))
     medians = np.full((len(motifs), max_mlen), dtype=np.single, fill_value=np.nan)
     counts = np.full((len(motifs), max_mlen), dtype=np.int32, fill_value=0)
-    fwd_ = np.array(fwd, dtype=np.single)
-    rev_ = np.array(rev, dtype=np.single)
     c_bases = ct.c_char_p((bases + '\0').encode('utf8'))
+    
+    #fwd_ = np.array(fwd, dtype=np.single)
+    #rev_ = np.array(rev, dtype=np.single)
+    fwd_ = [np.array(fwd, dtype=np.single) for fwd in fwds]
+    rev_ = [np.array(rev, dtype=np.single) for rev in revs]
+    fwd_arr = (ct.c_void_p * len(SAs))(*[ct.cast(np.ctypeslib.as_ctypes(fwd), ct.c_void_p) for fwd in fwd_])
+    rev_arr = (ct.c_void_p * len(SAs))(*[ct.cast(np.ctypeslib.as_ctypes(rev), ct.c_void_p) for rev in rev_])
+    SAs_arr = (PT(SuffixArray) * len(SAs))(*[ct.cast(ct.byref(sa), PT(SuffixArray)) for sa in SAs])
+    #SAs_arr = (PT(SuffixArray) * len(SAs))(*SAs)
     c_lib.motif_medians(motif_array, len(motifs), max_mlen+1, c_bases,
-                      fwd_, rev_,
-                      sa.sa, sa.lcp, sa.s, sa.n, 
-                      sa.rmq, sa.index, sa.sar,
+                      #fwd_, rev_,
+                      #sa.sa, sa.lcp, sa.s, sa.n, 
+                      #sa.rmq, sa.index, sa.sar,
+                      fwd_arr, rev_arr,
+                      SAs_arr, len(SAs),
                       medians, counts)
     return medians, counts
 

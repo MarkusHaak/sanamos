@@ -1231,11 +1231,14 @@ void reverse_complement(char* motif, int mlen, char* motif_rc)
 //                 float* fwd, float* rev,
 //                 int* SA, int* lcp, int* s, int n, int** rmq,
 //                 float* mean_data, int* count_data)
-void motif_means(const char* motifs_data, int motif_count, int max_mlen, const char* bases,
-                 float* fwd, float* rev,
-                 int* SA, int* lcp, int* s, int n, 
-                 int** rmq, int*** index, int* SAr,
-                 float* mean_data, int* count_data)
+void motif_means(
+  const char* motifs_data, int motif_count, int max_mlen, const char* bases,
+  //float* fwd, float* rev,
+  //int* SA, int* lcp, int* s, int n, 
+  //int** rmq, int*** index, int* SAr,
+  float** fwd, float** rev,
+  SuffixArray** SAs, int n_SAs,
+  float* mean_data, int* count_data)
 {
   // create row pointers for numpy arrays
   char** motifs = (char**)malloc(sizeof(char*) * motif_count);
@@ -1279,39 +1282,41 @@ void motif_means(const char* motifs_data, int motif_count, int max_mlen, const c
       total_n[o] = 0;
     }
     int n_indices, idx;
-    if (mlen > INDEX_SIZE) {
-      n_indices = find_motif_nonparallel((const char*)motif, mlen,
-                             SA, lcp, s, n, rmq,
-                             &indices);
-    } else {
-      n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
-                            SA, lcp, s, n, index, SAr,
-                            &indices);
-    }
-    for (int i=0; i<n_indices; i++) {
-      for (int o=0; o<n_offsets; o++) {
-        idx = indices[i] + offsets[o];
-        if (fwd[idx] == fwd[idx]) { // non-nan
-          total_sum[o] += fwd[idx];
-          total_n[o]++;
+    for (int k=0; k<n_SAs; k++) {
+      if (mlen > INDEX_SIZE) {
+        n_indices = find_motif_nonparallel((const char*)motif, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
+                              &indices);
+      } else {
+        n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
+                              &indices);
+      }
+      for (int i=0; i<n_indices; i++) {
+        for (int o=0; o<n_offsets; o++) {
+          idx = indices[i] + offsets[o];
+          if (fwd[k][idx] == fwd[k][idx]) { // non-nan
+            total_sum[o] += fwd[k][idx];
+            total_n[o]++;
+          }
         }
       }
-    }
-    if (mlen > INDEX_SIZE) {
-      n_indices = find_motif_nonparallel((const char*)motif_rc, mlen,
-                             SA, lcp, s, n, rmq,
-                             &indices_rc);
-    } else {
-      n_indices = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
-                            SA, lcp, s, n, index, SAr,
-                            &indices_rc);
-    }
-    for (int i=0; i<n_indices; i++) {
-      for (int o=0; o<n_offsets; o++) {
-        idx = indices_rc[i] + mlen - 1 - offsets[o];
-        if (rev[idx] == rev[idx]) { // non-nan
-          total_sum[o] += rev[idx];
-          total_n[o]++;
+      if (mlen > INDEX_SIZE) {
+        n_indices = find_motif_nonparallel((const char*)motif_rc, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
+                              &indices_rc);
+      } else {
+        n_indices = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
+                              &indices_rc);
+      }
+      for (int i=0; i<n_indices; i++) {
+        for (int o=0; o<n_offsets; o++) {
+          idx = indices_rc[i] + mlen - 1 - offsets[o];
+          if (rev[k][idx] == rev[k][idx]) { // non-nan
+            total_sum[o] += rev[k][idx];
+            total_n[o]++;
+          }
         }
       }
     }
@@ -1388,9 +1393,11 @@ float quick_select_median(float arr[], uint32_t n)
 
 void motif_medians(
   const char* motifs_data, int motif_count, int max_mlen, const char* bases,
-  float* fwd, float* rev,
-  int* SA, int* lcp, int* s, int n, 
-  int** rmq, int*** index, int* SAr,
+  //float* fwd, float* rev,
+  //int* SA, int* lcp, int* s, int n, 
+  //int** rmq, int*** index, int* SAr,
+  float** fwd, float** rev,
+  SuffixArray** SAs, int n_SAs,
   float* median_data, int* count_data)
 {
   // create row pointers for numpy arrays
@@ -1434,40 +1441,48 @@ void motif_medians(
         }
       }
     }
-    // 
-    int n_indices, n_indices_rc, idx;
-    int *indices, *indices_rc;
+
+    // search all contigs for all occurences
+    int n_indices[n_SAs], n_indices_rc[n_SAs], idx;
+    int *indices[n_SAs], *indices_rc[n_SAs];
+    int n_indices_total = 0;
     //double total_sum[n_offsets];
     int total_n[n_offsets];
     for (int o=0; o<n_offsets; o++) {
       //total_sum[o] = 0.0;
       total_n[o] = 0;
     }
-    //n_indices = find_motif_nonparallel((const char*)motif, mlen,
-    //                       SA, lcp, s, n, rmq,
-    //                       &indices);
-    if (mlen > INDEX_SIZE) {
-      n_indices = find_motif_nonparallel((const char*)motif, mlen,
-                             SA, lcp, s, n, rmq,
-                             &indices);
-    } else {
-      n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
-                            SA, lcp, s, n, index, SAr,
-                            &indices);
+    for (int k=0; k<n_SAs; k++) {
+      //printf("k: %d", k);
+      //n_indices = find_motif_nonparallel((const char*)motif, mlen,
+      //                       SA, lcp, s, n, rmq,
+      //                       &indices);
+      if (mlen > INDEX_SIZE) {
+        n_indices[k] = find_motif_nonparallel((const char*)motif, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
+                              &(indices[k]));
+      } else {
+        n_indices[k] = find_motif_nonparallel_indexed((const char*)motif, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
+                              &(indices[k]));
+      }
+      //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
+      //                       SA, lcp, s, n, rmq,
+      //                       &indices_rc);
+      if (mlen > INDEX_SIZE) {
+        n_indices_rc[k] = find_motif_nonparallel((const char*)motif_rc, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
+                              &(indices_rc[k]));
+      } else {
+        n_indices_rc[k] = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
+                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
+                              &(indices_rc[k]));
+      }
+      n_indices_total += n_indices[k] + n_indices_rc[k];
+      //printf(" done \n");
     }
-    //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
-    //                       SA, lcp, s, n, rmq,
-    //                       &indices_rc);
-    if (mlen > INDEX_SIZE) {
-      n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
-                             SA, lcp, s, n, rmq,
-                             &indices_rc);
-    } else {
-      n_indices_rc = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
-                            SA, lcp, s, n, index, SAr,
-                            &indices_rc);
-    }
-    int n_indices_total = n_indices + n_indices_rc;
+    //printf("n_indices_total: %d\n", n_indices_total);
+
     // define encodings array
     float** position_vals = (float**)malloc(sizeof(float*) * n_offsets + sizeof(float) * (n_offsets * n_indices_total));
     float* data = (float*)(position_vals + n_offsets);
@@ -1475,25 +1490,27 @@ void motif_medians(
       position_vals[i] = data + (i * n_indices_total);
     }
     // gather non-nan values
-    for (int i=0; i<n_indices; i++) {
-      for (int o=0; o<n_offsets; o++) {
-        idx = indices[i] + offsets[o];
-        if (idx < 0 || idx >= (n-1))
-          continue;
-        if (fwd[idx] == fwd[idx]) { // non-nan
-          position_vals[o][total_n[o]] = fwd[idx]; //fabsf(fwd[idx]);
-          total_n[o]++;
+    for (int k=0; k<n_SAs; k++) {
+      for (int i=0; i<n_indices[k]; i++) {
+        for (int o=0; o<n_offsets; o++) {
+          idx = indices[k][i] + offsets[o];
+          if (idx < 0 || idx >= (SAs[k]->n-1))
+            continue;
+          if (fwd[k][idx] == fwd[k][idx]) { // non-nan
+            position_vals[o][total_n[o]] = fwd[k][idx]; //fabsf(fwd[idx]);
+            total_n[o]++;
+          }
         }
       }
-    }
-    for (int i=0; i<n_indices_rc; i++) {
-      for (int o=0; o<n_offsets; o++) {
-        idx = indices_rc[i] + mlen - 1 - offsets[o];
-        if (idx < 0 || idx >= (n-1))
-          continue;
-        if (rev[idx] == rev[idx]) { // non-nan
-          position_vals[o][total_n[o]] = rev[idx]; //fabsf(rev[idx]);
-          total_n[o]++;
+      for (int i=0; i<n_indices_rc[k]; i++) {
+        for (int o=0; o<n_offsets; o++) {
+          idx = indices_rc[k][i] + mlen - 1 - offsets[o];
+          if (idx < 0 || idx >= (SAs[k]->n-1))
+            continue;
+          if (rev[k][idx] == rev[k][idx]) { // non-nan
+            position_vals[o][total_n[o]] = rev[k][idx]; //fabsf(rev[idx]);
+            total_n[o]++;
+          }
         }
       }
     }
@@ -1506,7 +1523,10 @@ void motif_medians(
       }
       count[m][offsets[o]] = total_n[o];
     }
-    free(indices); free(indices_rc); free(position_vals);
+    for (int k=0; k<n_SAs; k++) {
+      free(indices[k]); free(indices_rc[k]);
+    }
+    free(position_vals);
   }
   // free memory
   free(motifs); free(median); free(count);
