@@ -113,12 +113,11 @@ c_lib.read_sa.argtypes = [
 # initialize library
 c_lib.na_enc_init()
 
-def get_suffix_array(record_id, seq, cache_dir='tmp'):
+def get_suffix_array(record_id, seq, index_fp=''):
     sa = SuffixArray()
-    if cache_dir:
-        if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
-        index_fp = os.path.join(cache_dir, f"{record_id}.index")
+    if index_fp:
+        if not os.path.exists(os.path.dirname(index_fp)):
+            os.makedirs(os.path.dirname(index_fp))
         c_index_fp = ct.c_char_p(index_fp.encode('utf8'))
         if os.path.exists(index_fp):
             c_lib.read_sa(c_index_fp, len(seq) + 1, ct.byref(sa))
@@ -130,7 +129,7 @@ def get_suffix_array(record_id, seq, cache_dir='tmp'):
     c_lib.kasai(sa.s, sa.sa, sa.n, sa.lcp, sa.sar)
     c_lib.construct_rmq_array(sa.lcp, sa.n, sa.rmq)
     c_lib.create_index(sa.s, sa.sa, sa.n, sa.lcp, sa.index)
-    if cache_dir:
+    if index_fp:
         c_lib.write_sa(ct.byref(sa), c_index_fp)
     return sa
 
