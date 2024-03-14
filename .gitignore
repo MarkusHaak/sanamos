@@ -1,55 +1,158 @@
-__pycache__
+# General
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+.DS_Store
+Thumbs.db
 
-# Prerequisites
+# Python-specific
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+ENV/
+env/
+pyvenv.cfg
+.python-version
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints*
+
+# C/C++ specific
+*.a
+*.obj
+*.lib
+*.pdb
+*.ilk
+*.out
+*.i
+*.ii
+*.s
+*.su
 *.d
-
-# Object files
+*.deps
+*.map
+*.dep
+*.dSYM/
+*.dSYM.zip
+*.dwarf
+*.opendb
+*.pgd
+.vscode/
+*.user
+*.user.md
+*.userosscache
+*.sln.docstates
+*.suo
+*.cache
+*.ilk
+*.aps
+*.ncb
+*.sbr
+*.tlog
+*.log
+*.lastbuildstate
+*.idb
+*.pdb
+*.res
+*.obj
+*.exe
+*.dll
+*.lib
+*.exp
+*.manifest
+*.rsp
+*.sdf
+*.opensdf
+*.unsuccessfulbuild
+*.bsc
+*.sbr
+*.lo
+*.la
+*.al
+.libs
 *.o
 *.ko
 *.obj
 *.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-main
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-
-# Kernel Module Compile Results
-*.mod*
-*.cmd
 .tmp_versions/
 modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Build directories
+bin/
+obj/
+out/
+Release/
+Debug/
+x64/
+x86/
+build*/
+cmake-build*/
+
+# Backup files
+*~
+*.bak
+*.tmp
+*.temp
+
+# Editors and IDEs
+.idea/
+*.swp
+*.swo
+*.sublime*
+*.sublime/*
+*.class
+*.settings/
+*.project
+*.cproject
+*.launch
+.nbattrs
+.private/
+*.code-workspace
+.vs/
+*.vscode/
+*.vscode/*
+*.kate-swp
+*_history.txt
+
+# Dependency directories
+node_modules/
+jspm_packages/
+bower_components/
+
+# System Files
+*.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
+# setuptools' specific
+/.Python
+/env/
+/build/
+/dist/
+*.egg-info/
+.eggs/

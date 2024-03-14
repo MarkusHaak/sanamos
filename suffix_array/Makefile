@@ -5,16 +5,16 @@ CC=gcc
 # -funsigned-char because default is not defined for char!!
 CFLAGS= --std=gnu11 -O3 -march=native -Wall -pedantic -lrt -fopenmp -lm -funsigned-char 
 LDFLAGS= -fPIC -shared
-DEPS = suffix_array.h
-OBJ = main.o suffix_array.o sa.so
+DEPS = sa.h
+OBJ = main.o sa.o sa.so
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: suffix_array.so main
+all: sa.so main
 
-suffix_array.so: suffix_array.c $(DEPS)
-	gcc $(LDFLAGS) $(CFLAGS) suffix_array.c -o sa.so
+sa.so: sa.c $(DEPS)
+	gcc $(LDFLAGS) $(CFLAGS) sa.c -o sa.so
 
 main: $(OBJ)
 	gcc -o $@ $^ $(CFLAGS)

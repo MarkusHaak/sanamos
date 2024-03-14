@@ -1,4 +1,4 @@
-#include "suffix_array.h"
+#include "sa.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdint.h>

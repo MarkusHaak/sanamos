@@ -1,10 +1,12 @@
-import ctypes as ct
-from ctypes import POINTER as PT
-import numpy as np
 import os
-from Bio import SeqIO
 import random
 import sys
+import ctypes as ct
+from ctypes import POINTER as PT
+
+import numpy as np
+from Bio import SeqIO
+import pathlib
 
 comp_trans = str.maketrans("ACGTMRWSYKVHDBN", "TGCAKYWSRMBDHVN")
 
@@ -28,8 +30,9 @@ char_2d_pp = np.ctypeslib.ndpointer(dtype=np.byte, ndim=2, flags='C_CONTIGUOUS')
 int_2d_pp = np.ctypeslib.ndpointer(dtype=np.int32, ndim=2, flags='C_CONTIGUOUS')
 
 # Load the shared library into ctypes
-libname = os.path.abspath(os.path.join(os.path.dirname(__file__), "sa.so"))
-c_lib = ct.CDLL(libname)
+#libname = os.path.abspath(os.path.join(os.path.dirname(__file__), "sa.so"))
+libfile = pathlib.Path(__file__).parent / "sa.so"
+c_lib = ct.CDLL(str(libfile))
 c_lib.encode_str.restype = ct.c_int
 c_lib.encode_str.argtypes = [
     ct.c_char_p, PT(ct.c_int), PT(ct.c_int)]

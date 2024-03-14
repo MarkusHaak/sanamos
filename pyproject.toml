@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "suffix_array"
+version = "0.0.1"
+description = "C implementation of suffix arrays with IUPAC DNA motif search and python wrapper"
+authors = [
+  { name = "Markus Haak", email = "markus.haak@posteo.de" },
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+dependencies = ["numpy", "Biopython"]
+
+[project.urls]
+"Homepage" = "https://github.com/MarkusHaak/suffix_array.git"
