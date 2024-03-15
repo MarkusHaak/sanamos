@@ -63,7 +63,8 @@ c_lib.find_all_bipartite.argtypes = [
 c_lib.find_motif.argtypes = [
     ct.c_char_p, ct.c_int, PT(ct.c_int), 
     PT(ct.c_int), PT(ct.c_int), ct.c_int, 
-    PT(PT(ct.c_int)), PT(PT(ct.c_int))]
+    PT(PT(ct.c_int)), PT(PT(PT(ct.c_int))), PT(ct.c_int),
+    PT(PT(ct.c_int))]
 #c_lib.motif_means.argtypes = [
 #    char_2d_pp, ct.c_int, ct.c_int,
 #    single_1d_pp, single_1d_pp,
@@ -207,11 +208,11 @@ def find_motif(motif, sa, poi=0, rc=True):
         return np.array([]), np.array([])
     c_query = ct.c_char_p(motif.upper().encode('utf8'))
     if rc:
-        rc_motif = reverse_complement(motif.upper())
-        c_query_rc = ct.c_char_p(rc_motif.encode('utf8'))
+        motif_rc = reverse_complement(motif.upper())
+        c_query_rc = ct.c_char_p(motif_rc.encode('utf8'))
     c_indices = PT(ct.c_int)()
     n = c_lib.find_motif(c_query, len(motif),
-                sa.sa, sa.lcp, sa.s, sa.n, sa.rmq,
+                sa.sa, sa.lcp, sa.s, sa.n, sa.rmq, sa.index, sa.sar,
                 ct.byref(c_indices))
     if n:
         # TODO: think about converting c array directly ("by buffer" numpy function)
@@ -223,14 +224,14 @@ def find_motif(motif, sa, poi=0, rc=True):
     else:
         indices = np.array([])
     if rc:
-        if rc_motif == motif.upper():
+        if motif_rc == motif.upper():
             # for palindromic motifs, we don't need to search again
             indices_rc = indices.copy()
             indices_rc += len(motif) - 2*poi - 1
         else:
             c_indices_rc = PT(ct.c_int)()
             n = c_lib.find_motif(c_query_rc, len(motif),
-                    sa.sa, sa.lcp, sa.s, sa.n, sa.rmq,
+                    sa.sa, sa.lcp, sa.s, sa.n, sa.rmq, sa.index, sa.sar,
                     ct.byref(c_indices_rc))
             if n:
                 indices_rc = np.empty(shape=(n,), dtype=np.int32)

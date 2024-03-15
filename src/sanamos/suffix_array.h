@@ -69,16 +69,16 @@ extern int get_indices_bipartite(
   int k, int N, int* SA, int* s, int n, int q1len, 
   int g, int* q2, int q2len, 
   int* indices);
-extern int find_motif(
-  const char* motif, int mlen, int* SA, int* lcp, int* s, int n, int** rmq,
-  int** res);
-extern int find_motif_nonparallel(
+extern int find_motif_(
   const char* motif, int mlen,
   int* SA, int* lcp, int* s, int n, int** rmq,
   int** res);
-extern int find_motif_nonparallel_indexed(
+extern int find_motif_indexed_(
   const char* motif, int mlen,
   int* SA, int* lcp, int* s, int n, int*** index, int* SAr,
+  int** res);
+extern int find_motif(
+  const char* motif, int mlen, int* SA, int* lcp, int* s, int n, int** rmq, int*** index, int* SAr,
   int** res);
 //extern void motif_means(
 //  const char* motifs_data, int motif_count, int max_mlen,

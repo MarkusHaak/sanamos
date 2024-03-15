@@ -401,12 +401,18 @@ void create_index(int* s, int* SA, int n, int* lcp, int*** index)
         idx = encoding_to_index(&s[SA[i]], l, l);
         //printf("%#04X\n", idx);
         index[j][idx][0] = i;
-      } else if (lcp[i] < l) {
-        index[j][idx][1] = i;
-        //printf("SA[i] = %d\n", SA[i]);
-        idx = encoding_to_index(&s[SA[i]], l, l);
-        //printf("%#04X\n", idx);
-        index[j][idx][0] = i;
+      } else {
+        if (lcp[i] < l) {
+          index[j][idx][1] = i;
+          //printf("SA[i] = %d\n", SA[i]);
+          idx = encoding_to_index(&s[SA[i]], l, l);
+          //printf("%#04X\n", idx);
+          index[j][idx][0] = i;
+        } else if (i == n-1) {
+          index[j][idx][1] = i+1;
+          //idx = encoding_to_index(&s[SA[i]], l, l);
+          //index[j][idx][0] = i;
+        }
       }
     }
     //index[idx][1] = n - 1;
@@ -847,134 +853,11 @@ bool IUPAC_match(const char* iupac, int* enc, int n)
   return true;
 }
 
-// find indices of the given motif
-// motif given in IUPAC must be uppercase and not contain terminal N characters
-int find_motif(const char* motif, int mlen,
-               int* SA, int* lcp, int* s, int n, int** rmq,
-               int** res)
-{
-  int N_total = 0;
-  // determine best motif-search strategy
-  // find longest gap (stretch of N)
-  int g, gloc, in_gap; // longest gap
-  g = 0; gloc = 0; in_gap = 0;
-  for (int i=1; i<mlen; i++) {
-    if (motif[i] == 'N') {
-      in_gap++;
-    } else if (in_gap > 0) {
-      if (in_gap >= g) {
-        g = in_gap;
-        gloc = i - g;
-      }
-      in_gap = 0;
-    }
-  }
-  if (g <= 2) {
-    // search as contiguous motif
-    int* Is;
-    int* Ns;
-    int n_enc = find_IUPAC(motif, mlen, SA, lcp, s, n, rmq,
-                           &Is, &Ns);
-    for (int i=0; i<n_enc; i++) {
-      N_total += Ns[i];
-    }
-    int* indices = (int*)malloc(sizeof(int) * N_total);
-    int N_curr = 0;
-    for (int i=0; i<n_enc; i++) {
-      get_indices(Is[i], Ns[i], SA, &indices[N_curr]);
-      //#ifdef DEBUG
-      //printf("hits for encoding %d (n = %d):\n", i, Ns[i]);
-      //for (int j=0; j<Ns[i]; j++) {
-      //  printf("#%3d : SA[%3d] = %3d, substring: ", j, Is[i] + j, SA[Is[i] + j]);
-      //  for (int k=0; k<mlen; k++) {
-      //    printf("%d ", s[SA[Is[i] + j] + k]);
-      //  }
-      //  printf("\n");
-      //}
-      //#endif
-      N_curr += Ns[i];
-    }
-    *res = indices;
-    free(Is); free(Ns);
-  } else {
-    // search as bipartite motif
-    // search the longer one of the two parts
-    int* Is;
-    int* Ns;
-    const char* q1; const char* q2;
-    int q1len, q2len;
-    int offset = 0;
-    if (gloc >= mlen - (gloc + g)) {
-      // search for prefix
-      q1 = motif;
-      q1len = gloc;
-      q2 = &(motif[gloc + g]);
-      q2len = mlen - (gloc + g);
-    } else {
-      // search for suffix
-      offset = -(gloc + g);
-      q1 = &(motif[gloc + g]);
-      q1len = mlen - (gloc + g);
-      q2 = motif;
-      q2len = gloc;
-      g = -g;
-    }
-    int n_enc = find_IUPAC(q1, q1len, SA, lcp, s, n, rmq,
-                           &Is, &Ns);
-    for (int i=0; i<n_enc; i++) {
-      N_total += Ns[i];
-    }
-    int* indices = (int*)malloc(sizeof(int) * N_total);
-    
-    int new_N = 0;
-#pragma omp parallel
-{
-    for (int i=0; i<n_enc; i++) {
-      if (g >= 0) { // search q2 DOWNSTREAM of q1
-        int max_loc = n - (q1len + g + q2len) - 1;
-#pragma omp for
-        for (int j=Is[i]; j<(Is[i]+Ns[i]); j++) {
-          if (SA[j] <= max_loc) {
-            //int o = arr_lcp(q2, &(s[SA[j] + q1len + g]), q2len);
-            if (IUPAC_match(q2, &(s[SA[j] + q1len + g]), q2len)) {
-#pragma omp critical
-{
-              indices[new_N] = SA[j];
-              new_N++;
-}
-            }       
-          }
-        }
-      } else { // search q2 UPSTREAM of q1
-        int max_loc = q2len - g;
-#pragma omp for
-        for (int j=Is[i]; j<(Is[i]+Ns[i]); j++) {
-          if (SA[j] >= max_loc) {
-            //int o = arr_lcp(q2, &(s[SA[j] + g - q2len]), q2len);
-            if (IUPAC_match(q2, &(s[SA[j] + g - q2len]), q2len)) {
-#pragma omp critical
-{
-              indices[new_N] = SA[j] + offset;
-              new_N++;
-}
-            }
-          }         
-        }
-      }
-    }
-}
-    indices = (int*)realloc(indices, sizeof(int) * new_N);
-    *res = indices;
-    N_total = new_N;
-    free(Is); free(Ns);
-  }
-
-  return N_total;
-}
-
-int find_motif_nonparallel(const char* motif, int mlen,
-                           int* SA, int* lcp, int* s, int n, int** rmq,
-                           int** res)
+int find_motif_(
+  const char* motif, int mlen,
+  int* SA, int* lcp, int* s, int n, int** rmq,
+  int** res
+)
 {
   int N_total = 0;
   // determine best motif-search strategy
@@ -1085,10 +968,11 @@ int find_motif_nonparallel(const char* motif, int mlen,
 }
 
 
-int find_motif_nonparallel_indexed(
+int find_motif_indexed_(
   const char* motif, int mlen,
   int* SA, int* lcp, int* s, int n, int*** index, int* SAr,
-  int** res)
+  int** res
+)
 {
   int N_total = 0;
   // determine best motif-search strategy
@@ -1228,6 +1112,30 @@ int find_motif_nonparallel_indexed(
   return N_total;
 }
 
+// find indices of the given motif
+// motif given in IUPAC must be uppercase and not contain terminal N characters
+int find_motif(
+  const char* motif, int mlen,
+  int* SA, int* lcp, int* s, int n, int** rmq, int*** index, int* SAr,
+  int** res
+)
+{
+  int N_total;
+  if (mlen > INDEX_SIZE) {
+    N_total = find_motif_(
+      motif, mlen,
+      SA, lcp, s, n, rmq,
+      res);
+  } else {
+    N_total = find_motif_indexed_(
+      motif, mlen,
+      SA, lcp, s, n, index, SAr,
+      res);
+  }
+  return N_total;
+}
+
+
 //void motif_means(const char* motifs_data, int motif_count, int max_mlen,
 //                 float* fwd, float* rev,
 //                 int* SA, int* lcp, int* s, int n, int** rmq,
@@ -1284,15 +1192,9 @@ void motif_means(
     }
     int n_indices, idx;
     for (int k=0; k<n_SAs; k++) {
-      if (mlen > INDEX_SIZE) {
-        n_indices = find_motif_nonparallel((const char*)motif, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
-                              &indices);
-      } else {
-        n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
-                              &indices);
-      }
+      n_indices = find_motif((const char*)motif, mlen,
+                            SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq, SAs[k]->index, SAs[k]->sar,
+                            &indices);
       for (int i=0; i<n_indices; i++) {
         for (int o=0; o<n_offsets; o++) {
           idx = indices[i] + offsets[o];
@@ -1302,15 +1204,9 @@ void motif_means(
           }
         }
       }
-      if (mlen > INDEX_SIZE) {
-        n_indices = find_motif_nonparallel((const char*)motif_rc, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
-                              &indices_rc);
-      } else {
-        n_indices = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
-                              &indices_rc);
-      }
+      n_indices = find_motif((const char*)motif_rc, mlen,
+                            SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq, SAs[k]->index, SAs[k]->sar,
+                            &indices_rc);
       for (int i=0; i<n_indices; i++) {
         for (int o=0; o<n_offsets; o++) {
           idx = indices_rc[i] + mlen - 1 - offsets[o];
@@ -1458,27 +1354,15 @@ void motif_medians(
       //n_indices = find_motif_nonparallel((const char*)motif, mlen,
       //                       SA, lcp, s, n, rmq,
       //                       &indices);
-      if (mlen > INDEX_SIZE) {
-        n_indices[k] = find_motif_nonparallel((const char*)motif, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
-                              &(indices[k]));
-      } else {
-        n_indices[k] = find_motif_nonparallel_indexed((const char*)motif, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
-                              &(indices[k]));
-      }
+      n_indices[k] = find_motif((const char*)motif, mlen,
+                            SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq, SAs[k]->index, SAs[k]->sar,
+                            &(indices[k]));
       //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
       //                       SA, lcp, s, n, rmq,
       //                       &indices_rc);
-      if (mlen > INDEX_SIZE) {
-        n_indices_rc[k] = find_motif_nonparallel((const char*)motif_rc, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq,
-                              &(indices_rc[k]));
-      } else {
-        n_indices_rc[k] = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
-                              SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->index, SAs[k]->sar,
-                              &(indices_rc[k]));
-      }
+      n_indices_rc[k] = find_motif((const char*)motif_rc, mlen,
+                            SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq, SAs[k]->index, SAs[k]->sar,
+                            &(indices_rc[k]));
       n_indices_total += n_indices[k] + n_indices_rc[k];
       //printf(" done \n");
     }
@@ -1577,27 +1461,15 @@ void all_motif_medians(
     //n_indices = find_motif_nonparallel((const char*)motif, mlen,
     //                       SA, lcp, s, n, rmq,
     //                       &indices);
-    if (mlen > INDEX_SIZE) {
-      n_indices = find_motif_nonparallel((const char*)motif, mlen,
-                             SA, lcp, s, n, rmq,
-                             &indices);
-    } else {
-      n_indices = find_motif_nonparallel_indexed((const char*)motif, mlen,
-                            SA, lcp, s, n, index, SAr,
+    n_indices = find_motif((const char*)motif, mlen,
+                            SA, lcp, s, n, rmq, index, SAr,
                             &indices);
-    }
     //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
     //                       SA, lcp, s, n, rmq,
     //                       &indices_rc);
-    if (mlen > INDEX_SIZE) {
-      n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
-                             SA, lcp, s, n, rmq,
-                             &indices_rc);
-    } else {
-      n_indices_rc = find_motif_nonparallel_indexed((const char*)motif_rc, mlen,
-                            SA, lcp, s, n, index, SAr,
+    n_indices_rc = find_motif((const char*)motif_rc, mlen,
+                            SA, lcp, s, n, rmq, index, SAr,
                             &indices_rc);
-    }
     int n_indices_total = n_indices + n_indices_rc;
     // define encodings array
     float** position_vals = (float**)malloc(sizeof(float*) * n_offsets + sizeof(float) * (n_offsets * n_indices_total));
