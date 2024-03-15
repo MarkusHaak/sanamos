@@ -238,14 +238,11 @@ void skew(int* s, int* SA, int n, int K) {
     }
   }
   free(SA12); free(SA0); free(s0); free(s12);
-  //delete [] s12; delete [] SA12; delete [] SA0; delete [] s0;
 }
 
 // make lcp array using the Kasai algorithm
 void kasai(int* s, int* SA, int n, int* lcp, int* invertedSuffixArray)
 {
-  //int* invertedSuffixArray;
-  //invertedSuffixArray = (int*)malloc(sizeof(int) * n);
 	//Construct Inverted Suffix Array
 	for (int i = 0; i < n; i++)
 		invertedSuffixArray[SA[i]] = i;
@@ -265,7 +262,6 @@ void kasai(int* s, int* SA, int n, int* lcp, int* invertedSuffixArray)
 			  l--;
     }
 	}
-  //free(invertedSuffixArray);
 }
 
 void print_sa_lcd(SuffixArray* sa, const char* str)
@@ -299,7 +295,6 @@ void construct_rmq_array(int* lcp, int n, int** M)
   for (int j=1; j<=h; j++){
     for (int i=0; i + floor(exp2(j)) < n; i++){ // (1 << j)
       int b = i + floor(exp2(j-1)); //(1 << (j - 1));
-      //printf("j = %d, i = %d, b = %d\n", j,i,b);
       if (M[j-1][i] <= M[j-1][b]) {
         M[j][i] = M[j-1][i];
       } else {
@@ -309,7 +304,8 @@ void construct_rmq_array(int* lcp, int n, int** M)
   }
 }
 
-int arr_lcp(int* a, int* b, int n) 
+int arr_lcp(int* a, int* b, int n)
+// returns the lcp of a and b
 {
   int k = 0;
   for (int i=0; i<n ; i++) {
@@ -320,6 +316,7 @@ int arr_lcp(int* a, int* b, int n)
 }
 
 int encoding_to_index(int* encoding, int n, int index_size)
+// returns a unique INDEX_SIZE*2 bit long encoding for each possible k-mer with k <= INDEX_SIZE
 {
   int res = encoding[0] - 1;
   for (int i=1; i<n; i++) {
@@ -332,13 +329,7 @@ int encoding_to_index(int* encoding, int n, int index_size)
 
 void create_index(int* s, int* SA, int n, int* lcp, int*** index)
 {
-  /*
-  int* data = (int*)(index + INDEX_SIZE_N);
-  for (int i=0; i<INDEX_SIZE_N; i++) {
-    index[i] = data + (i * 2);
-  }
-  */
-
+  // initialize array
   int* data = (int*)(index + INDEX_SIZE + INDEX_SIZE_N);
   for (int i=0; i<INDEX_SIZE; i++) {
     (index)[i] = (int**)(index) + INDEX_SIZE;
@@ -347,99 +338,67 @@ void create_index(int* s, int* SA, int n, int* lcp, int*** index)
       offset += (int)pow(4, j+1);
     }
     (index)[i] += offset;
-    //printf("%d: %d %d\n", i, offset, (int)pow(4, i+1));
     for (int j=0; j<(int)pow(4, i+1); j++) {
       (index)[i][j] = data + 2 * offset + (j * 2);
     }
   }
-  // set defaults (for encoding not in genomic sequence)
+  // set defaults (for the case that encodings are not in genomic sequence)
   for (int i=0; i<INDEX_SIZE; i++) {
-    //printf("%d: %d\n", i, (int)pow(4, i+1));
     for (int j=0; j<(int)pow(4, i+1); j++) {
-      //printf("%d\n", j);
-      index[i][j][0] = n;//(n-1);
-      index[i][j][1] = n;//(n-1);
+      index[i][j][0] = n;
+      index[i][j][1] = n;
     }
   }
   
-  //printf("go\n");
   // go through suffix array and assign start / end points for encodings
   int idx;
   for (int j=0; j<(n-1 < INDEX_SIZE ? n-1 : INDEX_SIZE); j++) {
-    int l = j + 1;
-    //printf("\nl = %d\n", l);
+    // get suffix array indices of all k-mers
+    int k = j + 1;
     int i=1; // first elem is empty suffix
     int suffix_len;
-    for (; i<n; i++) {
+    for (; i<n; i++) { // skip suffix array entries at start of array that are shorter than k
       suffix_len = n - SA[i] - 1;
-      if (suffix_len >= l)
+      if (suffix_len >= k)
         break;
     }
-    //printf("%d\n", i);
-    //printf("%d\n", SA[i]);
-    //printf("%d\n", n);
-    idx = encoding_to_index(&s[SA[i]], l, l);
-    //printf("%#04X\n", idx);
-    //int start = i;
-    index[j][idx][0] = i;
-    ////printf("%d\n", i);
+    idx = encoding_to_index(&s[SA[i]], k, k);
+    index[j][idx][0] = i; // set start index of k-mer
     for (; i<n; i++) {
-      //printf("i = %d\n", i);
       suffix_len = n - SA[i] - 1;
-      //printf("suffix_len = %d\n", suffix_len);
-      //printf("lcp[i] = %d\n", lcp[i]);
-      if (suffix_len < l) {
+      if (suffix_len < k) {
+        // set end index if k-mer and
+        // skip suffix array entries that are shorter than k
         index[j][idx][1] = i;
-        while ((suffix_len < l) && (i < n-1)) {
+        while ((suffix_len < k) && (i < n-1)) {
           i++;
           suffix_len = n - SA[i] - 1;
-          //printf("*suffix_len = %d\n", suffix_len);
         }
         if (i == n)
           break;
-        //printf("SA[i] = %d\n", SA[i]);
-        idx = encoding_to_index(&s[SA[i]], l, l);
-        //printf("%#04X\n", idx);
-        index[j][idx][0] = i;
+        // if there is another k-mer, set its start index
+        idx = encoding_to_index(&s[SA[i]], k, k);
+        index[j][idx][0] = i; // set start index of first k-mer
       } else {
-        if (lcp[i] < l) {
+        if (lcp[i] < k) {
+          // if the i-th entry of the suffix array is a new k-mer
+          // set end index of previous k-mer and start index of the new one
           index[j][idx][1] = i;
-          //printf("SA[i] = %d\n", SA[i]);
-          idx = encoding_to_index(&s[SA[i]], l, l);
-          //printf("%#04X\n", idx);
+          idx = encoding_to_index(&s[SA[i]], k, k);
           index[j][idx][0] = i;
         } else if (i == n-1) {
-          index[j][idx][1] = i+1;
-          //idx = encoding_to_index(&s[SA[i]], l, l);
-          //index[j][idx][0] = i;
+          // if end of suffix array is reached, set end index of last k-mer
+          index[j][idx][1] = n;
         }
       }
     }
-    //index[idx][1] = n - 1;
   }
-  /*/ print
-  for (int idx=0; idx<INDEX_SIZE_N; idx++) {
-    if (index[idx][0] != (n-1)) {
-      printf("%#04X : (%d, %d)\n", idx, index[idx][0], index[idx][1]);
-      for (int j=index[idx][0]; j<index[idx][1]; j++) {
-        for (int c=0; c<INDEX_SIZE; c++) {
-          printf("%d ", s[SA[j]+c]);
-        }
-        printf("\n");
-      }
-    }
-  }
-  
-  //*/
-  //printf("done\n");
 }
 
 int binary_search_r(int* q, int qlen, int* SA, int* lcp, int* s, int** rmq,
                      int l, int mp, int r, int m, int k,
                      int* res) 
 {
-  //printf("%d\n", mp);
-
   // find lcp between the previous and the current suffix
   // --> use precomputed RMQ for O(1) complexity
   int kp;
@@ -462,7 +421,6 @@ int binary_search_r(int* q, int qlen, int* SA, int* lcp, int* s, int** rmq,
     if (kp > qlen)
       kp = qlen;
   }
-  //printf("kp / rmq : %2d / %2d, k : %2d\n", kp, kp_rmq, k);
 
   // As in https://de.wikipedia.org/wiki/LCP-Array
   if (k == kp) { // k == kp
@@ -521,7 +479,6 @@ int find(int* q, int qlen, int* SA, int* lcp, int* s, int n, int** rmq,
   l = 0;
   r = n;
   m = l + (n - l) / 2;
-  //printf("%d\n", m);
   int k = arr_lcp(q, &s[SA[m]], qlen);
   if (k == qlen) {
     // found
@@ -577,72 +534,6 @@ int find_all_indexed(
   return index[qlen-1][idx][1] - index[qlen-1][idx][0];
 }
 
-int find_all_bipartite(int* q1, int q1len, int g, int* q2, int q2len, 
-                       int* SA, int* lcp, int* s, int n, int** rmq,
-                       int** idxs)
-{
-  int N1, i1, N2, i2;
-  int* indices1;
-  int* indices2;
-#pragma omp parallel num_threads(2)
-{
-#pragma omp single
-{
-#pragma omp task
-{
-  i1 = 0;
-  N1 = find_all(q1, q1len, SA, lcp, s, n, rmq, &i1);
-}
-#pragma omp task
-{
-  i2 = 0;
-  N2 = find_all(q2, q2len, SA, lcp, s, n, rmq, &i2);
-}
-#pragma omp taskwait
-  if (N1 > 0 && N2 > 0) {
-#pragma omp task
-{
-    indices1 = (int*)malloc(sizeof(int) * N1);
-    get_indices(i1, N1, SA, indices1);
-    qsort(indices1, N1, sizeof(int), comp);
-}
-#pragma omp task
-{
-    indices2 = (int*)malloc(sizeof(int) * N2);
-    get_indices(i2, N2, SA, indices2);
-    qsort(indices2, N2, sizeof(int), comp);
-}
-  }
-}
-}
-  if (N1 == 0 || N2 == 0) return 0;
-
-  // identify bipartite hits
-  int i, j, k;
-  i = 0; j = 0; k = 0;
-  int* indices;
-  indices = (int*)malloc(sizeof(int) * ((N1 < N2) ? N1 : N2));
-  while ((i < N1) && (j < N2)) {
-    if (indices1[i] < indices2[j]) {
-      if ((indices2[j] - indices1[i]) == (q1len + g)) {
-        indices[k] = indices1[i];
-        k++;
-        i++;
-        j++;
-      } else if ((indices2[j] - indices1[i]) > (q1len + g)) {
-        i++;
-      } else {
-        j++;
-      }
-    } else {
-      j++;
-    }
-  }
-  free(indices1); free(indices2);
-  *idxs = indices;
-  return k;
-}
-
 void get_indices(int k, int N, int* SA, int* indices)
 {
   for (int i=0; i<N; i++){
@@ -654,44 +545,6 @@ void get_indices_from_bipartite_search(int* idxs, int N, int*indices)
 {
   memcpy(indices, idxs, sizeof(int) * N);
   free(idxs);
-}
-
-int get_indices_bipartite(int k, int N, int* SA, int* s, int n, int q1len, int g, int* q2, int q2len, int* indices)
-{
-  // filter for indices with a mathing sub-query q2 that follows after a gap of length g
-  int new_N = 0;
-  if (g >= 0) { // search q2 DOWNSTREAM of q1
-    int max_loc = n - (q1len + g + q2len) - 1;
-#pragma omp parallel for if(N > 100)
-    for (int j=k; j<(k+N); j++) {
-      if (SA[j] <= max_loc) {
-        int o = arr_lcp(q2, &(s[SA[j] + q1len + g]), q2len);
-        if (o == q2len) {
-#pragma omp critical
-{
-          indices[new_N] = SA[j];
-          new_N++;
-}
-        }
-      }
-    }
-  } else { // search q2 UPSTREAM of q1
-    int max_loc = q2len - g;
-#pragma omp parallel for if(N > 100)
-    for (int j=k; j<(k+N); j++) {
-      if (SA[j] >= max_loc) {
-        int o = arr_lcp(q2, &(s[SA[j] + g - q2len]), q2len);
-        if (o == q2len) {
-#pragma omp critical
-{
-          indices[new_N] = SA[j];
-          new_N++;
-}
-        }
-      }
-    }
-  }
-  return new_N;
 }
 
 void encode_IUPAC(const char* motif, int mlen, int n_enc, int* factors, int** encodings)
@@ -731,16 +584,6 @@ void encode_IUPAC(const char* motif, int mlen, int n_enc, int* factors, int** en
     }
     blocksize /= factors[i];
   }
-  #ifdef DEBUG
-  // print encodings
-  for (int i=0; i<n_enc; i++) {
-    printf("encoding #%3d : ", i);
-    for (int j=0; j<mlen; j++) {
-      printf("%d ", encodings[i][j]);
-    }
-    printf("\n");
-  }
-  #endif
 }
 
 int get_number_of_IUPAC_encodings(const char* motif, int mlen, int* factors)
@@ -888,16 +731,6 @@ int find_motif_(
     int N_curr = 0;
     for (int i=0; i<n_enc; i++) {
       get_indices(Is[i], Ns[i], SA, &indices[N_curr]);
-      //#ifdef DEBUG
-      //printf("hits for encoding %d (n = %d):\n", i, Ns[i]);
-      //for (int j=0; j<Ns[i]; j++) {
-      //  printf("#%3d : SA[%3d] = %3d, substring: ", j, Is[i] + j, SA[Is[i] + j]);
-      //  for (int k=0; k<mlen; k++) {
-      //    printf("%d ", s[SA[Is[i] + j] + k]);
-      //  }
-      //  printf("\n");
-      //}
-      //#endif
       N_curr += Ns[i];
     }
     *res = indices;
@@ -938,7 +771,6 @@ int find_motif_(
         int max_loc = n - (q1len + g + q2len) - 1;
         for (int j=Is[i]; j<(Is[i]+Ns[i]); j++) {
           if (SA[j] <= max_loc) {
-            //int o = arr_lcp(q2, &(s[SA[j] + q1len + g]), q2len);
             if (IUPAC_match(q2, &(s[SA[j] + q1len + g]), q2len)) {
               indices[new_N] = SA[j];
               new_N++;
@@ -949,7 +781,6 @@ int find_motif_(
         int max_loc = q2len - g;
         for (int j=Is[i]; j<(Is[i]+Ns[i]); j++) {
           if (SA[j] >= max_loc) {
-            //int o = arr_lcp(q2, &(s[SA[j] + g - q2len]), q2len);
             if (IUPAC_match(q2, &(s[SA[j] + g - q2len]), q2len)) {
               indices[new_N] = SA[j] + offset;
               new_N++;
@@ -1003,16 +834,6 @@ int find_motif_indexed_(
     int N_curr = 0;
     for (int i=0; i<n_enc; i++) {
       get_indices(Is[i], Ns[i], SA, &indices[N_curr]);
-      //#ifdef DEBUG
-      //printf("hits for encoding %d (n = %d):\n", i, Ns[i]);
-      //for (int j=0; j<Ns[i]; j++) {
-      //  printf("#%3d : SA[%3d] = %3d, substring: ", j, Is[i] + j, SA[Is[i] + j]);
-      //  for (int k=0; k<mlen; k++) {
-      //    printf("%d ", s[SA[Is[i] + j] + k]);
-      //  }
-      //  printf("\n");
-      //}
-      //#endif
       N_curr += Ns[i];
     }
     *res = indices;
@@ -1135,16 +956,8 @@ int find_motif(
   return N_total;
 }
 
-
-//void motif_means(const char* motifs_data, int motif_count, int max_mlen,
-//                 float* fwd, float* rev,
-//                 int* SA, int* lcp, int* s, int n, int** rmq,
-//                 float* mean_data, int* count_data)
 void motif_means(
   const char* motifs_data, int motif_count, int max_mlen, const char* bases,
-  //float* fwd, float* rev,
-  //int* SA, int* lcp, int* s, int n, 
-  //int** rmq, int*** index, int* SAr,
   float** fwd, float** rev,
   SuffixArray** SAs, int n_SAs,
   float* mean_data, int* count_data)
@@ -1170,10 +983,6 @@ void motif_means(
     int n_offsets = 0;
     int offsets[mlen];
     for (int o=0; o<mlen; o++) {
-      //if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
-      //  offsets[n_offsets] = o;
-      //  n_offsets++;
-      //}
       for (int b=0; b<n_bases; b++) {
         if (motif[o] == bases[b]) {
           offsets[n_offsets] = o;
@@ -1290,9 +1099,6 @@ float quick_select_median(float arr[], uint32_t n)
 
 void motif_medians(
   const char* motifs_data, int motif_count, int max_mlen, const char* bases,
-  //float* fwd, float* rev,
-  //int* SA, int* lcp, int* s, int n, 
-  //int** rmq, int*** index, int* SAr,
   float** fwd, float** rev,
   SuffixArray** SAs, int n_SAs,
   float* median_data, int* count_data)
@@ -1314,22 +1120,10 @@ void motif_medians(
     int mlen = strlen(motifs[m]);
     char motif_rc[mlen + 1];
     reverse_complement(motif, mlen, motif_rc);
-    //// get offset locations
-    //int n_offsets = 0;
-    //int offsets[mlen+4];
-    //for (int o=-2; o<mlen+2; o++) {
-    //  //if (motif[o] == 'A' || motif[o] == 'C' || motif[o] == 'M') {
-    //  offsets[n_offsets] = o;
-    //  n_offsets++;
-    //  //}
-    //}
+    // get offset locations
     int n_offsets = 0;
     int offsets[mlen];
     for (int o=0; o<mlen; o++) {
-      //if (motif[o] == 'A' || motif[o] == 'C') {// || motif[o] == 'M') {
-      //  offsets[n_offsets] = o;
-      //  n_offsets++;
-      //}
       for (int b=0; b<n_bases; b++) {
         if (motif[o] == bases[b]) {
           offsets[n_offsets] = o;
@@ -1343,30 +1137,19 @@ void motif_medians(
     int n_indices[n_SAs], n_indices_rc[n_SAs], idx;
     int *indices[n_SAs], *indices_rc[n_SAs];
     int n_indices_total = 0;
-    //double total_sum[n_offsets];
     int total_n[n_offsets];
     for (int o=0; o<n_offsets; o++) {
-      //total_sum[o] = 0.0;
       total_n[o] = 0;
     }
     for (int k=0; k<n_SAs; k++) {
-      //printf("k: %d", k);
-      //n_indices = find_motif_nonparallel((const char*)motif, mlen,
-      //                       SA, lcp, s, n, rmq,
-      //                       &indices);
       n_indices[k] = find_motif((const char*)motif, mlen,
                             SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq, SAs[k]->index, SAs[k]->sar,
                             &(indices[k]));
-      //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
-      //                       SA, lcp, s, n, rmq,
-      //                       &indices_rc);
       n_indices_rc[k] = find_motif((const char*)motif_rc, mlen,
                             SAs[k]->sa, SAs[k]->lcp, SAs[k]->s, SAs[k]->n, SAs[k]->rmq, SAs[k]->index, SAs[k]->sar,
                             &(indices_rc[k]));
       n_indices_total += n_indices[k] + n_indices_rc[k];
-      //printf(" done \n");
     }
-    //printf("n_indices_total: %d\n", n_indices_total);
 
     // define encodings array
     float** position_vals = (float**)malloc(sizeof(float*) * n_offsets + sizeof(float) * (n_offsets * n_indices_total));
@@ -1452,21 +1235,13 @@ void all_motif_medians(
     // 
     int n_indices, n_indices_rc, idx;
     int *indices, *indices_rc;
-    //double total_sum[n_offsets];
     int total_n[n_offsets];
     for (int o=0; o<n_offsets; o++) {
-      //total_sum[o] = 0.0;
       total_n[o] = 0;
     }
-    //n_indices = find_motif_nonparallel((const char*)motif, mlen,
-    //                       SA, lcp, s, n, rmq,
-    //                       &indices);
     n_indices = find_motif((const char*)motif, mlen,
                             SA, lcp, s, n, rmq, index, SAr,
                             &indices);
-    //n_indices_rc = find_motif_nonparallel((const char*)motif_rc, mlen,
-    //                       SA, lcp, s, n, rmq,
-    //                       &indices_rc);
     n_indices_rc = find_motif((const char*)motif_rc, mlen,
                             SA, lcp, s, n, rmq, index, SAr,
                             &indices_rc);

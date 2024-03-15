@@ -9,7 +9,7 @@ addopts = [
 
 [project]
 name = "sanamos"
-version = "0.0.1"
+version = "0.1.0"
 description = "suffix array implementation in C with python wrapper for fast motif search in nucleic acid sequences"
 authors = [
   { name = "Markus Haak", email = "markus.haak@posteo.de" },

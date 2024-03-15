@@ -20,7 +20,6 @@ typedef struct {
   int*** index;
   int n;
   int K;
-  //char* str;
 } SuffixArray;
 
 extern int NA_ENC[UCHAR_MAX];
@@ -57,10 +56,6 @@ extern int find_all(
 extern int find_all_indexed(
   int* q, int qlen, int* SA, int* lcp, int* s, int n, 
   int*** index, int* res);
-extern int find_all_bipartite(
-  int* q1, int q1len, int g, int* q2, int q2len, 
-  int* SA, int* lcp, int* s, int n, int** rmq,
-  int** idxs);
 extern void get_indices(
   int k, int n, int* SA, int* indices);
 extern void get_indices_from_bipartite_search(
@@ -80,24 +75,13 @@ extern int find_motif_indexed_(
 extern int find_motif(
   const char* motif, int mlen, int* SA, int* lcp, int* s, int n, int** rmq, int*** index, int* SAr,
   int** res);
-//extern void motif_means(
-//  const char* motifs_data, int motif_count, int max_mlen,
-//  float* fwd, float* rev,
-//  int* SA, int* lcp, int* s, int n, int** rmq,
-//  float* mean_data, int* count_data);
 extern void motif_means(
   const char* motifs_data, int motif_count, int max_mlen, const char* bases,
-//  float* fwd, float* rev,
-//  int* SA, int* lcp, int* s, int n, 
-//  int** rmq, int*** index, int* SAr,
   float** fwd, float** rev,
   SuffixArray** SAs, int n_SAs,
   float* mean_data, int* count_data);
 extern void motif_medians(
   const char* motifs_data, int motif_count, int max_mlen, const char* bases,
-//  float* fwd, float* rev,
-//  int* SA, int* lcp, int* s, int n, 
-//  int** rmq, int*** index, int* SAr,
   float** fwd, float** rev,
   SuffixArray** SAs, int n_SAs,
   float* median_data, int* count_data);
