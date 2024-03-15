@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python
 
 # Big parts taken from:
 # https://github.com/joerick/python-ctypes-package-sample
@@ -30,7 +30,7 @@ setup(
     ext_modules=[
         Extension(
             name="suffix_array.sa",
-            sources=["suffix_array/sa.c"],
+            sources=["src/suffix_array/sa.c"],
             extra_compile_args=["--std=gnu11", "-O3", "-march=native", "-lrt", "-fopenmp", "-lm", "-funsigned-char"],
             extra_link_args=["-fPIC", "-shared", "-fopenmp"]
         ),

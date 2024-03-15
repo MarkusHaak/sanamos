@@ -72,6 +72,10 @@ extern int get_indices_bipartite(
 extern int find_motif(
   const char* motif, int mlen, int* SA, int* lcp, int* s, int n, int** rmq,
   int** res);
+extern int find_motif_nonparallel(
+  const char* motif, int mlen,
+  int* SA, int* lcp, int* s, int n, int** rmq,
+  int** res);
 extern int find_motif_nonparallel_indexed(
   const char* motif, int mlen,
   int* SA, int* lcp, int* s, int n, int*** index, int* SAr,

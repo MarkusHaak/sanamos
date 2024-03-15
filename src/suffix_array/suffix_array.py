@@ -116,14 +116,17 @@ c_lib.read_sa.argtypes = [
 # initialize library
 c_lib.na_enc_init()
 
-def get_suffix_array(record_id, seq, index_fp=''):
+def get_suffix_array(record_id, seq, cache_fp=''):
+    if len(seq) <= 1:
+        # actually, the minimum seq length is the index size, which is 8
+        raise ValueError("Minimum sequence length for suffix array creation is 1.") 
     sa = SuffixArray()
-    if index_fp:
-        if not os.path.exists(os.path.dirname(index_fp)):
-            os.makedirs(os.path.dirname(index_fp))
-        c_index_fp = ct.c_char_p(index_fp.encode('utf8'))
-        if os.path.exists(index_fp):
-            c_lib.read_sa(c_index_fp, len(seq) + 1, ct.byref(sa))
+    if cache_fp:
+        if not os.path.exists(os.path.dirname(cache_fp)):
+            os.makedirs(os.path.dirname(cache_fp))
+        c_cache_fp = ct.c_char_p(cache_fp.encode('utf8'))
+        if os.path.exists(cache_fp):
+            c_lib.read_sa(c_cache_fp, len(seq) + 1, ct.byref(sa))
             return sa
     target = str(seq).encode('utf8')
     target = ct.c_char_p(target)
@@ -132,8 +135,8 @@ def get_suffix_array(record_id, seq, index_fp=''):
     c_lib.kasai(sa.s, sa.sa, sa.n, sa.lcp, sa.sar)
     c_lib.construct_rmq_array(sa.lcp, sa.n, sa.rmq)
     c_lib.create_index(sa.s, sa.sa, sa.n, sa.lcp, sa.index)
-    if index_fp:
-        c_lib.write_sa(ct.byref(sa), c_index_fp)
+    if cache_fp:
+        c_lib.write_sa(ct.byref(sa), c_cache_fp)
     return sa
 
 def delete_suffix_array(sa):
@@ -200,9 +203,12 @@ def reverse_complement(seq):
     return seq.translate(comp_trans)[::-1]
 
 def find_motif(motif, sa, poi=0, rc=True):
+    if len(motif) >= sa.n:
+        return np.array([]), np.array([])
     c_query = ct.c_char_p(motif.upper().encode('utf8'))
     if rc:
-        c_query_rc = ct.c_char_p(reverse_complement(motif.upper()).encode('utf8'))
+        rc_motif = reverse_complement(motif.upper())
+        c_query_rc = ct.c_char_p(rc_motif.encode('utf8'))
     c_indices = PT(ct.c_int)()
     n = c_lib.find_motif(c_query, len(motif),
                 sa.sa, sa.lcp, sa.s, sa.n, sa.rmq,
@@ -217,16 +223,21 @@ def find_motif(motif, sa, poi=0, rc=True):
     else:
         indices = np.array([])
     if rc:
-        c_indices_rc = PT(ct.c_int)()
-        n = c_lib.find_motif(c_query_rc, len(motif),
-                sa.sa, sa.lcp, sa.s, sa.n, sa.rmq,
-                ct.byref(c_indices_rc))
-        if n:
-            indices_rc = np.empty(shape=(n,), dtype=np.int32)
-            c_lib.get_indices_from_bipartite_search(c_indices_rc, n, indices_rc)
-            indices_rc += len(motif) - poi - 1
+        if rc_motif == motif.upper():
+            # for palindromic motifs, we don't need to search again
+            indices_rc = indices.copy()
+            indices_rc += len(motif) - 2*poi - 1
         else:
-            indices_rc = np.array([])
+            c_indices_rc = PT(ct.c_int)()
+            n = c_lib.find_motif(c_query_rc, len(motif),
+                    sa.sa, sa.lcp, sa.s, sa.n, sa.rmq,
+                    ct.byref(c_indices_rc))
+            if n:
+                indices_rc = np.empty(shape=(n,), dtype=np.int32)
+                c_lib.get_indices_from_bipartite_search(c_indices_rc, n, indices_rc)
+                indices_rc += len(motif) - poi - 1
+            else:
+                indices_rc = np.array([])
         return indices, indices_rc
     else:
         return indices

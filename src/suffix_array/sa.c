@@ -63,6 +63,31 @@ void na_enc_init() {
   memcpy(p, q, sizeof(*p) * 15 * 4);
 }
 
+void reverse_complement(char* motif, int mlen, char* motif_rc)
+{
+  // "ACGTMRWSYKVHDBN", "TGCAKYWSRMBDHVN"
+  for (int i=0; i<mlen; i++) {
+    switch (motif[i]) {
+      case 'A' : motif_rc[mlen - i - 1] = 'T'; break;
+      case 'C' : motif_rc[mlen - i - 1] = 'G'; break;
+      case 'G' : motif_rc[mlen - i - 1] = 'C'; break;
+      case 'T' : motif_rc[mlen - i - 1] = 'A'; break;
+      case 'M' : motif_rc[mlen - i - 1] = 'K'; break;
+      case 'R' : motif_rc[mlen - i - 1] = 'Y'; break;
+      case 'W' : motif_rc[mlen - i - 1] = 'W'; break;
+      case 'S' : motif_rc[mlen - i - 1] = 'S'; break;
+      case 'Y' : motif_rc[mlen - i - 1] = 'R'; break;
+      case 'K' : motif_rc[mlen - i - 1] = 'M'; break;
+      case 'V' : motif_rc[mlen - i - 1] = 'B'; break;
+      case 'H' : motif_rc[mlen - i - 1] = 'D'; break;
+      case 'D' : motif_rc[mlen - i - 1] = 'H'; break;
+      case 'B' : motif_rc[mlen - i - 1] = 'V'; break;
+      case 'N' : motif_rc[mlen - i - 1] = 'N'; break;
+    }
+  }
+  motif_rc[mlen] = '\0';
+}
+
 int* get_na_enc()
 {
   return NA_ENC;
@@ -336,10 +361,11 @@ void create_index(int* s, int* SA, int n, int* lcp, int*** index)
       index[i][j][1] = n;//(n-1);
     }
   }
+  
   //printf("go\n");
   // go through suffix array and assign start / end points for encodings
   int idx;
-  for (int j=0; j<INDEX_SIZE; j++) {
+  for (int j=0; j<(n-1 < INDEX_SIZE ? n-1 : INDEX_SIZE); j++) {
     int l = j + 1;
     //printf("\nl = %d\n", l);
     int i=1; // first elem is empty suffix
@@ -1200,31 +1226,6 @@ int find_motif_nonparallel_indexed(
   }
 
   return N_total;
-}
-
-void reverse_complement(char* motif, int mlen, char* motif_rc)
-{
-  // "ACGTMRWSYKVHDBN", "TGCAKYWSRMBDHVN"
-  for (int i=0; i<mlen; i++) {
-    switch (motif[i]) {
-      case 'A' : motif_rc[mlen - i - 1] = 'T'; break;
-      case 'C' : motif_rc[mlen - i - 1] = 'G'; break;
-      case 'G' : motif_rc[mlen - i - 1] = 'C'; break;
-      case 'T' : motif_rc[mlen - i - 1] = 'A'; break;
-      case 'M' : motif_rc[mlen - i - 1] = 'K'; break;
-      case 'R' : motif_rc[mlen - i - 1] = 'Y'; break;
-      case 'W' : motif_rc[mlen - i - 1] = 'W'; break;
-      case 'S' : motif_rc[mlen - i - 1] = 'S'; break;
-      case 'Y' : motif_rc[mlen - i - 1] = 'R'; break;
-      case 'K' : motif_rc[mlen - i - 1] = 'M'; break;
-      case 'V' : motif_rc[mlen - i - 1] = 'B'; break;
-      case 'H' : motif_rc[mlen - i - 1] = 'D'; break;
-      case 'D' : motif_rc[mlen - i - 1] = 'H'; break;
-      case 'B' : motif_rc[mlen - i - 1] = 'V'; break;
-      case 'N' : motif_rc[mlen - i - 1] = 'N'; break;
-    }
-  }
-  motif_rc[mlen] = '\0';
 }
 
 //void motif_means(const char* motifs_data, int motif_count, int max_mlen,

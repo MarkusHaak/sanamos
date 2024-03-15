@@ -2,6 +2,11 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
 [project]
 name = "suffix_array"
 version = "0.0.1"
@@ -17,7 +22,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.8"
-dependencies = ["numpy", "Biopython"]
+dependencies = ["pytest", "numpy", "Biopython"]
 
 [project.urls]
 "Homepage" = "https://github.com/MarkusHaak/suffix_array.git"
