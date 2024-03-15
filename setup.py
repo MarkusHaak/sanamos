@@ -26,11 +26,11 @@ class bdist_wheel_abi_none(_bdist_wheel):
         return "py3", "none", plat
 
 setup(
-    name="suffix_array",
+    name="sanamos",
     ext_modules=[
         Extension(
-            name="suffix_array.sa",
-            sources=["src/suffix_array/sa.c"],
+            name="sanamos.sa",
+            sources=["src/sanamos/suffix_array.c"],
             extra_compile_args=["--std=gnu11", "-O3", "-march=native", "-lrt", "-fopenmp", "-lm", "-funsigned-char"],
             extra_link_args=["-fPIC", "-shared", "-fopenmp"]
         ),

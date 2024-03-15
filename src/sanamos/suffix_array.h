@@ -1,5 +1,5 @@
-#ifndef SUFFIX_ARRAY_H
-#define SUFFIX_ARRAY_H
+#ifndef SANAMOS_SUFFIX_ARRAY_H
+#define SANAMOS_SUFFIX_ARRAY_H
 
 #include <stdbool.h>
 #include <limits.h>

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from suffix_array import *
+from sanamos import *
 
 m1, seq1 = "AGCT", "AAAGCTGG"
 

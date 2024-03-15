@@ -8,9 +8,9 @@ addopts = [
 ]
 
 [project]
-name = "suffix_array"
+name = "sanamos"
 version = "0.0.1"
-description = "C implementation of suffix arrays with IUPAC DNA motif search and python wrapper"
+description = "suffix array implementation in C with python wrapper for fast motif search in nucleic acid sequences"
 authors = [
   { name = "Markus Haak", email = "markus.haak@posteo.de" },
 ]
@@ -25,4 +25,4 @@ requires-python = ">=3.8"
 dependencies = ["pytest", "numpy", "Biopython"]
 
 [project.urls]
-"Homepage" = "https://github.com/MarkusHaak/suffix_array.git"
+"Homepage" = "https://github.com/MarkusHaak/sanamos.git"
