@@ -1,2 +1,2 @@
 include pyproject.toml
-recursive-include *.h *.c *.cpp
+recursive-include src *.h *.c *.cpp
